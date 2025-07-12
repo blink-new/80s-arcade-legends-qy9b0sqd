@@ -20,7 +20,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.src = `https://via.placeholder.com/400x300/1e293b/f59e0b?text=${encodeURIComponent(game.title)}`;
+            target.src = `https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=400&h=300&fit=crop&crop=center&auto=format&q=80&text=${encodeURIComponent(game.title)}`;
           }}
         />
         

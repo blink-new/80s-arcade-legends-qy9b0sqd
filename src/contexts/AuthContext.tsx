@@ -4,6 +4,7 @@ import { User } from '../types';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
   subscribe: () => void;
@@ -39,7 +40,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(parsedUser);
       setIsAuthenticated(true);
     }
+
+    // Initialize Google Sign-In
+    initializeGoogleSignIn();
   }, []);
+
+  const initializeGoogleSignIn = () => {
+    // Load Google Identity Services script
+    if (!document.getElementById('google-identity-script')) {
+      const script = document.createElement('script');
+      script.id = 'google-identity-script';
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     // Admin check
@@ -63,10 +79,68 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return false;
   };
 
+  const loginWithGoogle = async (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      // Check if Google Identity Services is loaded
+      if (typeof window.google === 'undefined') {
+        console.error('Google Identity Services not loaded');
+        resolve(false);
+        return;
+      }
+
+      // Initialize Google Sign-In
+      window.google.accounts.id.initialize({
+        client_id: process.env.GOOGLE_CLIENT_ID || 'demo-client-id',
+        callback: (response: { credential: string }) => {
+          try {
+            // Decode the JWT token to get user info
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            
+            const isAdminUser = payload.email === 'mick2575@gmail.com';
+            
+            const newUser: User = {
+              id: payload.sub,
+              email: payload.email,
+              isSubscribed: isAdminUser,
+              isAdmin: isAdminUser,
+              playtimeRemaining: isAdminUser ? Infinity : 300,
+              googleId: payload.sub,
+              name: payload.name,
+              picture: payload.picture
+            };
+            
+            setUser(newUser);
+            setIsAuthenticated(true);
+            localStorage.setItem('arcade-user', JSON.stringify(newUser));
+            resolve(true);
+          } catch (error) {
+            console.error('Google sign-in error:', error);
+            resolve(false);
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+
+      // Prompt the user to sign in
+      window.google.accounts.id.prompt((notification: { isNotDisplayed: () => boolean; isSkippedMoment: () => boolean }) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          console.log('Google Sign-In prompt not displayed');
+          resolve(false);
+        }
+      });
+    });
+  };
+
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('arcade-user');
+    
+    // Sign out from Google
+    if (typeof window.google !== 'undefined') {
+      window.google.accounts.id.disableAutoSelect();
+    }
   };
 
   const subscribe = () => {
@@ -126,6 +200,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const contextValue: AuthContextType = {
     user,
     login,
+    loginWithGoogle,
     logout,
     isAuthenticated,
     subscribe,
@@ -141,3 +216,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+// Extend window type for Google Identity Services
+declare global {
+  interface Window {
+    google: {
+      accounts: {
+        id: {
+          initialize: (config: { client_id: string; callback: (response: { credential: string }) => void; auto_select: boolean; cancel_on_tap_outside: boolean }) => void;
+          prompt: (callback?: (notification: { isNotDisplayed: () => boolean; isSkippedMoment: () => boolean }) => void) => void;
+          disableAutoSelect: () => void;
+        };
+      };
+    };
+  }
+}

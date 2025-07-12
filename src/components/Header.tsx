@@ -3,12 +3,14 @@ import { Button } from './ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginDialog } from './LoginDialog';
 import { SubscriptionDialog } from './SubscriptionDialog';
-import { Timer, User, LogOut, Settings, Crown } from 'lucide-react';
+import { ControllerSetup } from './ControllerSetup';
+import { Timer, User, LogOut, Settings, Crown, Gamepad2 } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const { user, isAuthenticated, logout, checkSubscription, isAdmin, getPlayTimeRemaining } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
+  const [showControllerSetup, setShowControllerSetup] = useState(false);
   
   const playTimeRemaining = getPlayTimeRemaining();
   const isSubscribed = checkSubscription();
@@ -39,6 +41,17 @@ export const Header: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Controller Setup Button - Available to all users */}
+            <Button
+              onClick={() => setShowControllerSetup(true)}
+              variant="outline"
+              size="sm"
+              className="border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-black"
+            >
+              <Gamepad2 className="w-4 h-4 mr-2" />
+              Controllers
+            </Button>
+
             {isAuthenticated ? (
               <>
                 {/* Play Time Display */}
@@ -68,7 +81,7 @@ export const Header: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <User className="w-4 h-4" />
                   <span className="text-sm">
-                    {user?.email}
+                    {user?.name || user?.email}
                     {isAdmin() && (
                       <span className="ml-2 text-xs bg-red-500 px-2 py-1 rounded-full">
                         ADMIN
@@ -121,6 +134,12 @@ export const Header: React.FC = () => {
       <SubscriptionDialog
         isOpen={showSubscription}
         onClose={() => setShowSubscription(false)}
+      />
+
+      {/* Controller Setup Dialog */}
+      <ControllerSetup
+        isOpen={showControllerSetup}
+        onClose={() => setShowControllerSetup(false)}
       />
     </header>
   );

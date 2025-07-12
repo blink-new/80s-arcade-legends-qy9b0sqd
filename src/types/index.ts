@@ -20,6 +20,9 @@ export interface User {
   isAdmin: boolean;
   lastPlayed?: Date;
   playtimeRemaining?: number; // in seconds for free users
+  googleId?: string;
+  name?: string;
+  picture?: string;
 }
 
 export interface GameSession {
